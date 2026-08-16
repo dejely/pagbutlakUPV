@@ -1,15 +1,19 @@
 import type { Metadata } from 'next'
 import { RelatedArticles } from '@/blocks/RelatedArticles/Component'
+import { JsonLd } from '@/components/JsonLd'
 import { PayloadRedirects } from '@/components/PayloadRedirects'
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 import { draftMode } from 'next/headers'
+import { redirect } from 'next/navigation'
 import React, { cache } from 'react'
 import RichText from '@/components/RichText'
 import { ArticleHero } from '@/heros/ArticleHero'
 import { generateMeta } from '@/utilities/generateMeta'
+import { getArticleSchema } from '@/utilities/structuredData'
 import PageClient from './page.client'
 import { LivePreviewListener } from '@/components/LivePreviewListener'
+import { AuthorPreviewCard } from '@/components/Authors/AuthorPreviewCard'
 
 export async function generateStaticParams() {
   const payload = await getPayload({ config: configPromise })
@@ -42,11 +46,18 @@ export default async function ArticlePage({ params: paramsPromise }: Args) {
   const url = '/articles/' + decodedSlug
   const article = await queryArticleBySlug({ slug: decodedSlug })
 
-  if (!article) return <PayloadRedirects url={url} />
+  if (!article) {
+    const match = await queryArticleBySlugPrefix({ slugPrefix: decodedSlug })
+    if (match) redirect(`/articles/${match.slug}`)
+
+    return <PayloadRedirects url={url} />
+  }
 
   return (
     <article className="pt-12 pb-16">
       <PageClient />
+
+      <JsonLd data={getArticleSchema(article)} />
 
       {/* Allows redirects for valid pages too */}
       <PayloadRedirects disableNotFound url={url} />
@@ -56,7 +67,19 @@ export default async function ArticlePage({ params: paramsPromise }: Args) {
       {/* Main content */}
       <div className="max-w-[48rem] mx-auto px-4 md:px-6">
         <ArticleHero article={article} />
+
         <RichText data={article.content} enableGutter={false} />
+
+        <hr className="my-12 border-border" />
+
+        {/* Authors */}
+        <div className="space-y-4">
+          {article.authors?.map((author) => {
+            if (typeof author === 'number') return null
+
+            return <AuthorPreviewCard key={author.id} doc={author} />
+          })}
+        </div>
       </div>
 
       {/* Related articles */}
@@ -90,6 +113,21 @@ const queryArticleBySlug = cache(async ({ slug }: { slug: string }) => {
     limit: 1,
     overrideAccess: draft,
     pagination: false,
+    select: {
+      title: true,
+      slug: true,
+      section: true,
+      heroImage: true,
+      content: true,
+      relatedArticles: true,
+      categories: true,
+      meta: true,
+      publishedAt: true,
+      authors: true,
+      readingTimeMinutes: true,
+      updatedAt: true,
+      createdAt: true,
+    },
     where: {
       slug: {
         equals: slug,
@@ -97,4 +135,32 @@ const queryArticleBySlug = cache(async ({ slug }: { slug: string }) => {
     },
   })
   return result.docs?.[0] || null
+})
+
+// Auto-completes partial slugs (e.g. "global-" -> "global-gaze") when exactly one article matches.
+const MIN_SLUG_PREFIX_LENGTH = 4
+
+const queryArticleBySlugPrefix = cache(async ({ slugPrefix }: { slugPrefix: string }) => {
+  if (slugPrefix.length < MIN_SLUG_PREFIX_LENGTH) return null
+
+  const { isEnabled: draft } = await draftMode()
+  const payload = await getPayload({ config: configPromise })
+  const result = await payload.find({
+    collection: 'articles',
+    draft,
+    limit: 10,
+    overrideAccess: draft,
+    pagination: false,
+    select: {
+      slug: true,
+    },
+    where: {
+      slug: {
+        like: slugPrefix,
+      },
+    },
+  })
+
+  const matches = result.docs.filter((doc) => doc.slug?.startsWith(slugPrefix))
+  return matches.length === 1 ? matches[0] : null
 })

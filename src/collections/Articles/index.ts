@@ -11,11 +11,15 @@ import {
 
 import { authenticated } from '../../access/authenticated'
 import { authenticatedOrPublished } from '../../access/authenticatedOrPublished'
+import { isAdmin } from '../../access/isAdmin'
+import { isAdminOrEditorOrOwner } from '../../access/isAdminOrEditorOrOwner'
 import { Banner } from '../../blocks/Banner/config'
 import { Code } from '../../blocks/Code/config'
 import { MediaBlock } from '../../blocks/MediaBlock/config'
+import { setCreatedBy } from '../../hooks/setCreatedBy'
+import { preventUnauthorizedPublish } from '../../hooks/preventUnauthorizedPublish'
 import { generatePreviewPath } from '../../utilities/generatePreviewPath'
-import { populateAuthors } from './hooks/populateAuthors'
+import { getReadingTimeMinutes } from '../../utilities/readingTime'
 import { revalidateArticle, revalidateDelete } from './hooks/revalidateArticle'
 
 import {
@@ -33,9 +37,9 @@ export const Articles: CollectionConfig<'articles'> = {
   slug: 'articles',
   access: {
     create: authenticated,
-    delete: authenticated,
+    delete: isAdminOrEditorOrOwner,
     read: authenticatedOrPublished,
-    update: authenticated,
+    update: isAdminOrEditorOrOwner,
   },
   // This config controls what's populated by default when an article is referenced
   // https://payloadcms.com/docs/queries/select#defaultpopulate-collection-config-property
@@ -44,13 +48,13 @@ export const Articles: CollectionConfig<'articles'> = {
     title: true,
     slug: true,
     categories: true,
+    readingTimeMinutes: true,
     meta: {
       image: true,
       description: true,
     },
     publishedAt: true,
     authors: true,
-    populatedAuthors: true,
   },
   admin: {
     defaultColumns: ['title', 'section', 'slug', 'updatedAt'],
@@ -199,37 +203,42 @@ export const Articles: CollectionConfig<'articles'> = {
         position: 'sidebar',
       },
       hasMany: true,
-      relationTo: 'users',
+      relationTo: 'authors',
+      required: true,
     },
-    // This field is only used to populate the user data via the `populateAuthors` hook
-    // This is because the `user` collection has access control locked to protect user privacy
-    // GraphQL will also not return mutated user data that differs from the underlying schema
     {
-      name: 'populatedAuthors',
-      type: 'array',
+      name: 'createdBy',
+      type: 'relationship',
       access: {
-        update: () => false,
+        update: isAdmin,
       },
       admin: {
-        disabled: true,
+        position: 'sidebar',
         readOnly: true,
       },
-      fields: [
-        {
-          name: 'id',
-          type: 'text',
-        },
-        {
-          name: 'name',
-          type: 'text',
-        },
-      ],
+      hasMany: false,
+      relationTo: 'users',
+    },
+    {
+      name: 'readingTimeMinutes',
+      type: 'number',
+      admin: {
+        readOnly: true,
+        position: 'sidebar',
+      },
+      hooks: {
+        beforeChange: [
+          ({ data }) => {
+            return getReadingTimeMinutes(data?.content)
+          },
+        ],
+      },
     },
     slugField(),
   ],
   hooks: {
+    beforeChange: [setCreatedBy, preventUnauthorizedPublish],
     afterChange: [revalidateArticle],
-    afterRead: [populateAuthors],
     afterDelete: [revalidateDelete],
   },
   versions: {

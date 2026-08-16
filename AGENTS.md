@@ -1,28 +1,250 @@
 # AGENTS.md
 
+This file provides guidance to AI coding agents working with code in this repository.
+
 ## Project Overview
 
-The **Pagbutlak Website** is a news website for the Pagbutlak UPV publication. "UPV Pagbutlak" is the official student and community publication of the University of the Philippines Visayas (UPV), specifically under the College of Arts and Sciences. This website is essentially the publication’s content management and distribution platform.
+Pagbutlak Website is a news publishing platform for UPV Pagbutlak, the official student and community publication of the University of the Philippines Visayas (UPV) - College of Arts and Sciences (CAS).
 
-The publication currently maintains a Wordpress site at <https://upvisayaspagbutlak.wordpress.com>. While it serves its purpose, several limitations justify creating a new platform to replace this legacy one.
+Content sections: News, Features, Opinion, Kultura. There's also a Multimedia section for video content (YouTube, Facebook, TikTok).
 
-The goal is to build a modern, maintainable, and scalable news publishing platform with improved editorial workflow, performance, and UX.
+The CMS has custom RBAC with three roles (`admin`/`editor`/`writer` on `Users.role`) enforcing a draft -> review -> publish workflow; see [Access Control (RBAC)](#access-control-rbac).
 
-### Content Sections
+## Project Structure
 
-The publication has four main sections:
+- `src/app/(frontend)/` - Public-facing pages (articles, authors, search, sections)
+  - `(sections)/` - Section listing pages (news, features, opinion, kultura)
+  - `articles/` - Article listing + `[slug]` detail pages
+  - `authors/` - Author listing + `[slug]` detail pages
+  - `multimedia/` - Multimedia listing + `[slug]` detail pages
+  - `[slug]/` - Dynamic slug pages (e.g., static pages)
+- `src/app/(payload)/` - Payload admin panel + API routes
+- `src/blocks/` - CMS block components for rich text
+- `src/collections/` - Payload collection configs
+- `src/globals/` - Payload global configs
+- `src/access/` - Reusable access control functions, including RBAC helpers (`isAdmin`, `isAdminOrEditor`, `isAdminOrEditorOrOwner`)
+- `src/fields/` - Shared Payload field definitions (defaultLexical, link, linkGroup)
+- `src/plugins/` - Payload plugin registration
+- `src/hooks/` - Payload hooks (populatePublishedAt, revalidateRedirects, RBAC enforcement hooks)
+- `src/components/` - React components (including shadcn/ui in `components/ui/`)
+- `src/heros/` - Hero section variants (HighImpact, MediumImpact, LowImpact)
+- `src/migrations/` - Database migration files + index
+- `src/constants/` - App constants (articleSections.ts)
+- `src/utilities/` - Shared utilities (ui.ts for cn(), getDocument, generateMeta, etc.)
+- `src/providers/` - React context providers
+- `src/search/` - Search plugin customization
+- `src/payload.config.ts` - Payload configuration
+- `src/payload-types.ts` - Auto-generated types (DO NOT hand-edit)
 
-- News
-- Features
-- Opinion
-- Kultura
+## Tech Stack
 
-## Development
+| Layer           | Technology                               |
+| --------------- | ---------------------------------------- |
+| CMS             | Payload CMS (headless)                   |
+| Framework       | Next.js (App Router)                     |
+| Database        | PostgreSQL via `@payloadcms/db-postgres` |
+| Language        | TypeScript (strict mode)                 |
+| Styling         | Tailwind CSS + shadcn/ui                 |
+| Rich Text       | Lexical (`@payloadcms/richtext-lexical`) |
+| Package Manager | pnpm (DO NOT use npm or yarn)            |
+| Testing         | Vitest (integration), Playwright (E2E)   |
+| Deployment      | Vercel / Docker (standalone output)      |
 
-This project is built with Payload CMS, a headless CMS built on top of Next.js, with Postgres as the database.
+## Quick Start
 
-Before any Payload CMS work, find and read the relevant skill in `.agents/skills/payload`.
+```bash
+docker compose up
+```
 
-Before any Next.js work, find and read the relevant doc in `node_modules/next/dist/docs/`.
+This starts two containers: `payload` (Node.js 22 Alpine) and `postgres` (PostgreSQL 16 Alpine). The app runs at `http://localhost:3000`.
 
-Your training data is outdated — the docs are the source of truth.
+For non-Docker setup, ensure `DATABASE_URI` points to a local Postgres instance (e.g., `localhost:5432`).
+
+## Commands
+
+| Command                              | Purpose                           |
+| ------------------------------------ | --------------------------------- |
+| `pnpm dev`                           | Start dev server                  |
+| `pnpm build`                         | Production build                  |
+| `pnpm lint`                          | Run ESLint                        |
+| `pnpm test:int`                      | Integration tests (Vitest)        |
+| `pnpm test:e2e`                      | E2E tests (Playwright)            |
+| `pnpm test`                          | Run all tests                     |
+| `pnpm payload migrate`               | Run pending migrations            |
+| `pnpm payload migrate:create <name>` | Create a new migration            |
+| `pnpm payload migrate:status`        | Check migration status            |
+| `pnpm generate:types`                | Regenerate `src/payload-types.ts` |
+| `pnpm generate:importmap`            | Regenerate Payload import map     |
+| `pnpm seed`                          | Seed the database via CLI         |
+
+Payload CLI commands must run **inside the Docker container** if using Docker:
+
+```bash
+docker compose exec payload pnpm payload migrate:create add_feature_x
+docker compose exec payload pnpm generate:types
+```
+
+## Environment Variables
+
+Required (see `.env.example`):
+
+| Variable                 | Description                    |
+| ------------------------ | ------------------------------ |
+| `DATABASE_URI`           | PostgreSQL connection string   |
+| `PAYLOAD_SECRET`         | JWT encryption secret          |
+| `NEXT_PUBLIC_SERVER_URL` | Public URL (no trailing slash) |
+| `CRON_SECRET`            | Cron job authentication        |
+| `PREVIEW_SECRET`         | Preview request validation     |
+
+## Coding Patterns
+
+### Migrations - Never Manually Create Files
+
+Always use the Payload CLI to create migrations:
+
+```bash
+pnpm payload migrate:create add_section_field
+```
+
+This generates `.ts` and `.json` files with timestamps and SQL scaffolding. The migration name should be a descriptive snake_case string (e.g., `add_section_field`, `rename_posts_to_articles`).
+
+After creating a migration:
+
+1. Edit the generated `up()` and `down()` functions with your SQL.
+2. Register the new migration in `src/migrations/index.ts` - import it and append an entry to the `migrations` array.
+3. Run `pnpm payload migrate` to apply.
+
+**Never** edit a migration file that has already been applied to a deployed environment. Create a new migration instead.
+
+### Types - Regenerate After Schema Changes
+
+After modifying any Payload collection or global config, run:
+
+```bash
+pnpm generate:types
+```
+
+This regenerates `src/payload-types.ts`. Never hand-edit this file. Import types from `@/payload-types` in components and hooks.
+
+### Import Map - Regenerate After Adding Admin Components
+
+After adding new components used in the Payload admin panel (custom fields, custom components), run:
+
+```bash
+pnpm generate:importmap
+```
+
+### Seeding
+
+- `seed()` in `src/endpoints/seed/index.ts` is the single source of truth for seed data. Both the Admin UI and `pnpm seed` use it.
+- Seeding is destructive: it clears seeded collections before repopulating them. Never run it against a database containing content that must be preserved.
+- The CLI (`pnpm seed`) uses the Local API directly and requires an existing user in the `users` collection.
+- Any `payload.create`, `update`, or `updateGlobal` call added to `seed()` must pass `context: { disableRevalidate: true }` to prevent Next.js revalidation hooks from running outside a request context.
+- When seeding an S3-backed database, ensure the `S3_*` environment variables are available to the environment running the seed command; otherwise media files may be written to local disk instead of S3.
+
+### Access Control (RBAC)
+
+- Three roles on `Users.role` (`admin`/`editor`/`writer`, `saveToJWT: true`). Writers can create/edit their own drafts but cannot publish, unpublish, or schedule-publish - editors/admins can. Ownership is tracked via a `createdBy` field (set by `setCreatedBy` hook) on Articles/Issues/Multimedia/Pages.
+- Since `_status` is an implicit field (from `versions.drafts`), publish/unpublish gating is enforced via `beforeChange` hooks (`preventUnauthorizedPublish`, `preventUnauthorizedSchedulePublish`), not field-level access.
+- `jobs.runHooks: true` in `payload.config.ts` is required for `preventUnauthorizedSchedulePublish` to run - Payload's job queue skips collection hooks by default.
+- When adding new roles/permissions or new collections that need ownership scoping, follow the existing pattern in `src/access/` and `src/hooks/` rather than introducing a new mechanism.
+
+## Code Conventions
+
+### Style
+
+- **Prettier**: single quotes, no semicolons, trailing commas, 100 char print width
+- **ESLint**: `next/core-web-vitals` + `next/typescript` with custom rules
+
+### Git
+
+- Use Conventional Commits (enforced by commitlint): `type(scope): concise description`.
+- Keep commits atomic: each commit should represent one logical, self-contained change.
+- Keep commit messages concise. Add a description only when necessary.
+- Do not co-author commits or include yourself in commit messages.
+- Do not use `--no-verify` or otherwise bypass Git hooks.
+- Do not bypass GPG signing. If a commit cannot be signed because GPG is locked or requires user interaction, stop and ask the user to unlock GPG before continuing.
+- Do not amend, rebase, reset, or otherwise rewrite existing commits unless explicitly requested.
+- Before committing, inspect the diff and ensure it contains only intended changes.
+- When updating a branch with changes from its base branch, prefer rebasing over merging.
+
+#### Branches
+
+- Use descriptive branch names with the format `type/<short-description>` (e.g., `feat/add-search`, `fix/article-slug`); prefer `feat/` over `feature/`.
+- Do not include issue number in branch names.
+- Keep branches focused on a single issue or logical change.
+- Create a dedicated branch for each change. Do not make changes directly on the default branch.
+
+#### Issues
+
+- Follow the GitHub issue template.
+- Add relevant GitHub labels; do not add labels speculatively.
+- Add relevant issue type.
+- Assign the issue to the current user.
+- Link issue to GitHub project "pagbutlak website".
+- Create an issue before opening a PR when the change is substantial enough to warrant dedicated tracking. For one-off changes, quick fixes, or simple patches that do not benefit from a dedicated issue, a PR may be created directly unless the user explicitly requests an issue.
+
+#### Pull Requests
+
+- Follow the GitHub PR template.
+- Add relevant GitHub labels; do not add labels speculatively.
+- Assign the PR to the current user.
+- Link the PR to its corresponding issue using `Closes #<issue-number>` when the PR fully resolves the issue.
+- If a corresponding issue exists but the PR does not fully resolve it, link the issue without using a closing keyword.
+- Keep PRs focused and reasonably sized.
+- Do not mark a PR ready for review while required checks are failing or known issues remain.
+
+### File Organization
+
+- Each collection/global is a folder or file in `src/collections/` or `src/globals/` exporting a config
+- CMS blocks go in `src/blocks/` - each block is a folder with a component and config
+- Reusable access control functions go in `src/access/`
+- Shared Payload field definitions go in `src/fields/`
+- Frontend pages follow Next.js App Router conventions in `src/app/(frontend)/`
+- Payload admin and API routes are in `src/app/(payload)/`
+
+### React Component File Structure
+
+Each component should have its own named folder:
+
+```
+ComponentName/
+├── index.tsx   # Component implementation
+└── index.scss  # Styles (if applicable)
+```
+
+- **Do:** Create a folder per component with `index.tsx` and optional `index.scss`
+- **Don't:** Place multiple `ComponentName.tsx` files in a single folder with one shared `.scss` file
+- Re-export from barrel files (`index.ts`) when grouping related components in a parent directory
+
+## Best Practices
+
+- **Object parameters for function arguments**
+- **Prefer types over interfaces** (except when extending external types)
+- **Prefer functions over classes** (classes only for errors/adapters)
+- **Prefer pure functions** - when mutation is unavoidable, return the mutated object instead of void
+- **Organize functions top-down** - exports before helpers
+- **Use `import type` for types**, regular `import` for values, separate statements even from the same module
+- **Prefix booleans** with `is`/`has`/`can`/`should` (e.g. `isValid`, `hasData`, `canEdit`) for clarity
+- **Prefer self-describing names** over generic names with comments to explain their purpose
+
+## Verification
+
+- Verify every code change before considering the task complete.
+- Run the checks relevant to the files and behavior changed.
+- At minimum, run `pnpm lint` for code changes.
+- Run `pnpm test:int` when changing backend, Payload, database, access control, hooks, or other integration behavior.
+- Run `pnpm test:e2e` when changing frontend behavior, routes, navigation, forms, or other end-to-end flows.
+- Run `pnpm build` only for changes that may affect the production build, configuration, dependencies, or deployment.
+- Never run `pnpm build` against a directory/container where `pnpm dev` is already running. Both write to the same `.next` output directory by default; a concurrent build corrupts the dev server's webpack cache and manifests. Instead, isolate the verification build with `BUILD_DIR`:
+  ```bash
+  docker compose exec -e BUILD_DIR=.next-verify payload pnpm build
+  docker compose exec payload rm -rf .next-verify
+  ```
+  Note: Next's dev-typegen may rewrite the shared `tsconfig.json` to reference `<BUILD_DIR>/types/**/*.ts` as a side effect. Discard that change rather than committing it.
+- Use Playwright/browser automation ONLY WHEN NEEDED for browser behavior, end-to-end verification, or visual inspection of UI changes. Prefer static inspection and existing tests when sufficient; avoid unnecessary browser interactions and screenshots.
+
+## Skills & Docs Reference
+
+- **Payload CMS**: Read `.agents/skills/payload/SKILL.md` before any Payload work
+- **Next.js**: Read `node_modules/next/dist/docs/` before any Next.js work

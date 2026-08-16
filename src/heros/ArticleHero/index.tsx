@@ -1,34 +1,32 @@
 import React from 'react'
 import type { Article } from '@/payload-types'
 import { Media } from '@/components/Media'
-import { formatAuthors } from '@/utilities/formatAuthors'
-import { formatReadableDate } from '@/utilities/formatReadableDate'
-import { Badge } from '@/components/ui/badge'
+import { formatHumanDate } from '@/utilities/formatHumanDate'
+import { CategoryBadge } from '@/components/Categories/CategoryBadge'
+import { formatReadingTime } from '@/utilities/readingTime'
+import { SocialMediaShare } from '@/components/SocialMediaShare'
+import { getServerSideURL } from '@/utilities/getURL'
 
 export const ArticleHero: React.FC<{
   article: Article
 }> = ({ article }) => {
-  const { categories, heroImage, populatedAuthors, publishedAt, updatedAt, title } = article
+  const { categories, heroImage, publishedAt, slug, updatedAt, title } = article
 
-  const hasAuthors =
-    populatedAuthors && populatedAuthors.length > 0 && formatAuthors(populatedAuthors) !== ''
-
-  const publishedDate = publishedAt ? formatReadableDate(publishedAt) : null
-  const updatedDate = updatedAt ? formatReadableDate(updatedAt) : null
+  const publishedDate = publishedAt ? formatHumanDate(publishedAt) : null
+  const updatedDate = updatedAt ? formatHumanDate(updatedAt) : null
+  const readingTimeLabel = formatReadingTime(article.readingTimeMinutes)
   const showUpdated = updatedDate && updatedDate !== publishedDate
+  const shareURL = `${getServerSideURL()}/articles/${slug}`
 
   return (
     <div className="w-full border-b border-border pb-8 mb-8 flex flex-col gap-6">
       {/* Categories */}
       {categories && categories.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {categories.map((category, index) => {
-            if (typeof category === 'object' && category !== null) {
-              const { title: categoryTitle } = category
-              const titleToUse = categoryTitle || 'Untitled category'
-              return <Badge key={index}>{titleToUse}</Badge>
-            }
-            return null
+          {categories.map((category) => {
+            if (typeof category !== 'object' || category === null) return null
+
+            return <CategoryBadge key={category.id} category={category} />
           })}
         </div>
       )}
@@ -39,24 +37,25 @@ export const ArticleHero: React.FC<{
       </h1>
 
       <div className="flex flex-col gap-2">
-        {/* Author */}
-        {hasAuthors && (
-          <p className="text-sm font-medium text-foreground">
-            By {formatAuthors(populatedAuthors)}
-          </p>
-        )}
-
-        {/* Dates */}
+        {/* Date */}
         {(publishedDate || showUpdated) && (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 text-sm text-muted-foreground">
             {publishedDate && <time dateTime={publishedAt!}>{publishedDate}</time>}
             {showUpdated && (
-              <time dateTime={updatedAt} className="text-muted-foreground/70">
+              <time dateTime={updatedAt} className="text-muted-foreground/50">
                 Updated {updatedDate}
               </time>
             )}
           </div>
         )}
+
+        {/* Reading time + share */}
+        <div className="flex items-center gap-4">
+          {readingTimeLabel && (
+            <div className="text-sm text-muted-foreground">{readingTimeLabel}</div>
+          )}
+          <SocialMediaShare title={title} url={shareURL} />
+        </div>
       </div>
 
       {/* Hero image */}

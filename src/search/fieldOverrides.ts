@@ -1,9 +1,45 @@
 import { Field } from 'payload'
+import { ARTICLE_SECTIONS } from '@/constants/articleSections'
 
 export const searchFields: Field[] = [
   {
+    name: 'section',
+    type: 'select',
+    index: true,
+    options: ARTICLE_SECTIONS as any as { label: string; value: string }[],
+    admin: {
+      readOnly: true,
+    },
+  },
+  {
     name: 'slug',
     type: 'text',
+    index: true,
+    admin: {
+      readOnly: true,
+    },
+  },
+  {
+    label: 'Authors',
+    name: 'authors',
+    type: 'relationship',
+    relationTo: 'authors',
+    hasMany: true,
+    admin: {
+      readOnly: true,
+    },
+  },
+  {
+    name: 'publishedAt',
+    type: 'date',
+    index: true,
+    admin: {
+      readOnly: true,
+    },
+  },
+  {
+    name: 'readingTimeMinutes',
+    type: 'number',
     index: true,
     admin: {
       readOnly: true,

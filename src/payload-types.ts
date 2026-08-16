@@ -69,9 +69,13 @@ export interface Config {
   collections: {
     pages: Page;
     articles: Article;
+    authors: Author;
     media: Media;
     categories: Category;
+    multimedia: Multimedia;
+    issues: Issue;
     users: User;
+    invitations: Invitation;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -91,9 +95,13 @@ export interface Config {
   collectionsSelect: {
     pages: PagesSelect<false> | PagesSelect<true>;
     articles: ArticlesSelect<false> | ArticlesSelect<true>;
+    authors: AuthorsSelect<false> | AuthorsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
+    multimedia: MultimediaSelect<false> | MultimediaSelect<true>;
+    issues: IssuesSelect<false> | IssuesSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
+    invitations: InvitationsSelect<false> | InvitationsSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -200,19 +208,12 @@ export interface Page {
         }[]
       | null;
     media?: (number | null) | Media;
+    /**
+     * Center the hero content instead of left-aligning it.
+     */
+    centered?: boolean | null;
   };
-  layout: (
-    | CallToActionBlock
-    | ContentBlock
-    | {
-        media: number | Media;
-        id?: string | null;
-        blockName?: string | null;
-        blockType: 'mediaBlock';
-      }
-    | ArchiveBlock
-    | FormBlock
-  )[];
+  layout: (CallToActionBlock | ContentBlock | MediaBlock | ArchiveBlock | FormBlock)[];
   meta?: {
     title?: string | null;
     /**
@@ -222,6 +223,7 @@ export interface Page {
     description?: string | null;
   };
   publishedAt?: string | null;
+  createdBy?: (number | null) | User;
   /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.
    */
@@ -266,13 +268,9 @@ export interface Article {
     description?: string | null;
   };
   publishedAt?: string | null;
-  authors?: (number | User)[] | null;
-  populatedAuthors?:
-    | {
-        id?: string | null;
-        name?: string | null;
-      }[]
-    | null;
+  authors: (number | Author)[];
+  createdBy?: (number | null) | User;
+  readingTimeMinutes?: number | null;
   /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.
    */
@@ -304,6 +302,7 @@ export interface Media {
     };
     [k: string]: unknown;
   } | null;
+  prefix?: string | null;
   folder?: (number | null) | FolderInterface;
   updatedAt: string;
   createdAt: string;
@@ -427,11 +426,41 @@ export interface Category {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "authors".
+ */
+export interface Author {
+  id: number;
+  name: string;
+  role: string;
+  bio?: string | null;
+  avatar?: (number | null) | Media;
+  socialLinks?: {
+    website?: string | null;
+    facebook?: string | null;
+    x?: string | null;
+    instagram?: string | null;
+    linkedin?: string | null;
+  };
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users".
  */
 export interface User {
   id: number;
   name?: string | null;
+  role?: ('admin' | 'editor' | 'writer') | null;
+  /**
+   * Link to a byline Author profile for credit purposes (optional).
+   */
+  author?: (number | null) | Author;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -504,6 +533,10 @@ export interface CallToActionBlock {
  * via the `definition` "ContentBlock".
  */
 export interface ContentBlock {
+  /**
+   * Center the column content instead of left-aligning it.
+   */
+  centered?: boolean | null;
   columns?:
     | {
         size?: ('oneThird' | 'half' | 'twoThirds' | 'full') | null;
@@ -548,6 +581,16 @@ export interface ContentBlock {
   id?: string | null;
   blockName?: string | null;
   blockType: 'content';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "MediaBlock".
+ */
+export interface MediaBlock {
+  media: number | Media;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'mediaBlock';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -785,6 +828,70 @@ export interface Form {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "multimedia".
+ */
+export interface Multimedia {
+  id: number;
+  title: string;
+  /**
+   * Link(s) to this video on YouTube, Facebook, and/or TikTok. Add one per platform it was posted to. The platform is detected automatically from each URL.
+   */
+  links: {
+    url: string;
+    id?: string | null;
+  }[];
+  /**
+   * Optional if any linked platform is YouTube or TikTok, which pull a default thumbnail automatically. Required otherwise (e.g. Facebook-only), since it has no automatic thumbnail.
+   */
+  thumbnail?: (number | null) | Media;
+  autoThumbnailUrl?: string | null;
+  caption?: string | null;
+  categories?: (number | Category)[] | null;
+  relatedMultimedia?: (number | Multimedia)[] | null;
+  publishedAt?: string | null;
+  createdBy?: (number | null) | User;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "issues".
+ */
+export interface Issue {
+  id: number;
+  title: string;
+  volume: number;
+  issueNumber: number;
+  coverImage: number | Media;
+  pdf: number | Media;
+  description?: string | null;
+  createdBy?: (number | null) | User;
+  publishedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "invitations".
+ */
+export interface Invitation {
+  id: number;
+  email: string;
+  role: 'admin' | 'editor' | 'writer';
+  token?: string | null;
+  expiresAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
 export interface Redirect {
@@ -840,7 +947,11 @@ export interface Search {
     relationTo: 'articles';
     value: number | Article;
   };
+  section?: ('news' | 'opinion' | 'feature' | 'kultura') | null;
   slug?: string | null;
+  authors?: (number | Author)[] | null;
+  publishedAt?: string | null;
+  readingTimeMinutes?: number | null;
   meta?: {
     title?: string | null;
     description?: string | null;
@@ -982,6 +1093,10 @@ export interface PayloadLockedDocument {
         value: number | Article;
       } | null)
     | ({
+        relationTo: 'authors';
+        value: number | Author;
+      } | null)
+    | ({
         relationTo: 'media';
         value: number | Media;
       } | null)
@@ -990,8 +1105,20 @@ export interface PayloadLockedDocument {
         value: number | Category;
       } | null)
     | ({
+        relationTo: 'multimedia';
+        value: number | Multimedia;
+      } | null)
+    | ({
+        relationTo: 'issues';
+        value: number | Issue;
+      } | null)
+    | ({
         relationTo: 'users';
         value: number | User;
+      } | null)
+    | ({
+        relationTo: 'invitations';
+        value: number | Invitation;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -1082,6 +1209,7 @@ export interface PagesSelect<T extends boolean = true> {
               id?: T;
             };
         media?: T;
+        centered?: T;
       };
   layout?:
     | T
@@ -1100,6 +1228,7 @@ export interface PagesSelect<T extends boolean = true> {
         description?: T;
       };
   publishedAt?: T;
+  createdBy?: T;
   generateSlug?: T;
   slug?: T;
   updatedAt?: T;
@@ -1135,6 +1264,7 @@ export interface CallToActionBlockSelect<T extends boolean = true> {
  * via the `definition` "ContentBlock_select".
  */
 export interface ContentBlockSelect<T extends boolean = true> {
+  centered?: T;
   columns?:
     | T
     | {
@@ -1210,12 +1340,8 @@ export interface ArticlesSelect<T extends boolean = true> {
       };
   publishedAt?: T;
   authors?: T;
-  populatedAuthors?:
-    | T
-    | {
-        id?: T;
-        name?: T;
-      };
+  createdBy?: T;
+  readingTimeMinutes?: T;
   generateSlug?: T;
   slug?: T;
   updatedAt?: T;
@@ -1224,11 +1350,35 @@ export interface ArticlesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "authors_select".
+ */
+export interface AuthorsSelect<T extends boolean = true> {
+  name?: T;
+  role?: T;
+  bio?: T;
+  avatar?: T;
+  socialLinks?:
+    | T
+    | {
+        website?: T;
+        facebook?: T;
+        x?: T;
+        instagram?: T;
+        linkedin?: T;
+      };
+  generateSlug?: T;
+  slug?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "media_select".
  */
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   caption?: T;
+  prefix?: T;
   folder?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -1338,10 +1488,54 @@ export interface CategoriesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "multimedia_select".
+ */
+export interface MultimediaSelect<T extends boolean = true> {
+  title?: T;
+  links?:
+    | T
+    | {
+        url?: T;
+        id?: T;
+      };
+  thumbnail?: T;
+  autoThumbnailUrl?: T;
+  caption?: T;
+  categories?: T;
+  relatedMultimedia?: T;
+  publishedAt?: T;
+  createdBy?: T;
+  generateSlug?: T;
+  slug?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "issues_select".
+ */
+export interface IssuesSelect<T extends boolean = true> {
+  title?: T;
+  volume?: T;
+  issueNumber?: T;
+  coverImage?: T;
+  pdf?: T;
+  description?: T;
+  createdBy?: T;
+  publishedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
   name?: T;
+  role?: T;
+  author?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -1358,6 +1552,18 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "invitations_select".
+ */
+export interface InvitationsSelect<T extends boolean = true> {
+  email?: T;
+  role?: T;
+  token?: T;
+  expiresAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1532,7 +1738,11 @@ export interface SearchSelect<T extends boolean = true> {
   title?: T;
   priority?: T;
   doc?: T;
+  section?: T;
   slug?: T;
+  authors?: T;
+  publishedAt?: T;
+  readingTimeMinutes?: T;
   meta?:
     | T
     | {
@@ -1669,23 +1879,40 @@ export interface Header {
  */
 export interface Footer {
   id: number;
-  navItems?:
+  /**
+   * A short one- or two-sentence description of the website.
+   */
+  description?: string | null;
+  socialLinks?: {
+    facebook?: string | null;
+    x?: string | null;
+    instagram?: string | null;
+    youtube?: string | null;
+    tiktok?: string | null;
+  };
+  navGroups?:
     | {
-        link: {
-          type?: ('reference' | 'custom') | null;
-          newTab?: boolean | null;
-          reference?:
-            | ({
-                relationTo: 'pages';
-                value: number | Page;
-              } | null)
-            | ({
-                relationTo: 'articles';
-                value: number | Article;
-              } | null);
-          url?: string | null;
-          label: string;
-        };
+        title: string;
+        navItems?:
+          | {
+              link: {
+                type?: ('reference' | 'custom') | null;
+                newTab?: boolean | null;
+                reference?:
+                  | ({
+                      relationTo: 'pages';
+                      value: number | Page;
+                    } | null)
+                  | ({
+                      relationTo: 'articles';
+                      value: number | Article;
+                    } | null);
+                url?: string | null;
+                label: string;
+              };
+              id?: string | null;
+            }[]
+          | null;
         id?: string | null;
       }[]
     | null;
@@ -1720,17 +1947,33 @@ export interface HeaderSelect<T extends boolean = true> {
  * via the `definition` "footer_select".
  */
 export interface FooterSelect<T extends boolean = true> {
-  navItems?:
+  description?: T;
+  socialLinks?:
     | T
     | {
-        link?:
+        facebook?: T;
+        x?: T;
+        instagram?: T;
+        youtube?: T;
+        tiktok?: T;
+      };
+  navGroups?:
+    | T
+    | {
+        title?: T;
+        navItems?:
           | T
           | {
-              type?: T;
-              newTab?: T;
-              reference?: T;
-              url?: T;
-              label?: T;
+              link?:
+                | T
+                | {
+                    type?: T;
+                    newTab?: T;
+                    reference?: T;
+                    url?: T;
+                    label?: T;
+                  };
+              id?: T;
             };
         id?: T;
       };
@@ -1764,21 +2007,19 @@ export interface TaskSchedulePublish {
       | ({
           relationTo: 'articles';
           value: number | Article;
+        } | null)
+      | ({
+          relationTo: 'multimedia';
+          value: number | Multimedia;
+        } | null)
+      | ({
+          relationTo: 'issues';
+          value: number | Issue;
         } | null);
     global?: string | null;
     user?: (number | null) | User;
   };
   output?: unknown;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "MediaBlock".
- */
-export interface MediaBlock {
-  media: number | Media;
-  id?: string | null;
-  blockName?: string | null;
-  blockType: 'mediaBlock';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

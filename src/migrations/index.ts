@@ -1,6 +1,20 @@
 import * as migration_20260316_141145_initial from './20260316_141145_initial'
 import * as migration_20260316_141257_rename_posts_to_articles from './20260316_141257_rename_posts_to_articles'
 import * as migration_20260317_131609_add_article_section_field from './20260317_131609_add_article_section_field'
+import * as migration_20260715_024628_add_authors from './20260715_024628_add_authors'
+import * as migration_20260723_051537_add_search_published_at_and_reading_time_fields from './20260723_051537_add_search_published_at_and_reading_time_fields'
+import * as migration_20260723_120033_add_articles_reading_time_field from './20260723_120033_add_articles_reading_time_field'
+import * as migration_20260804_062947_add_media_prefix_field from './20260804_062947_add_media_prefix_field'
+import * as migration_20260807_043333_rework_footer_nav_groups from './20260807_043333_rework_footer_nav_groups'
+import * as migration_20260810_184715_add_multimedia_collection from './20260810_184715_add_multimedia_collection'
+import * as migration_20260810_194922_add_search_section_field from './20260810_194922_add_search_section_field'
+import * as migration_20260811_064548_restructure_multimedia_links from './20260811_064548_restructure_multimedia_links'
+import * as migration_20260811_072800_add_related_multimedia from './20260811_072800_add_related_multimedia'
+import * as migration_20260811_074014_add_multimedia_categories from './20260811_074014_add_multimedia_categories'
+import * as migration_20260812_173450_add_issues_collection from './20260812_173450_add_issues_collection'
+import * as migration_20260814_192113_add_user_roles_and_ownership from './20260814_192113_add_user_roles_and_ownership'
+import * as migration_20260815_082758_add_invitations_collection from './20260815_082758_add_invitations_collection'
+import * as migration_20260815_181223_add_centered_fields_and_footer_tiktok from './20260815_181223_add_centered_fields_and_footer_tiktok'
 
 export const migrations = [
   {
@@ -17,5 +31,75 @@ export const migrations = [
     up: migration_20260317_131609_add_article_section_field.up,
     down: migration_20260317_131609_add_article_section_field.down,
     name: '20260317_131609_add_article_section_field',
+  },
+  {
+    up: migration_20260715_024628_add_authors.up,
+    down: migration_20260715_024628_add_authors.down,
+    name: '20260715_024628_add_authors',
+  },
+  {
+    up: migration_20260723_051537_add_search_published_at_and_reading_time_fields.up,
+    down: migration_20260723_051537_add_search_published_at_and_reading_time_fields.down,
+    name: '20260723_051537_add_search_published_at_and_reading_time_fields',
+  },
+  {
+    up: migration_20260723_120033_add_articles_reading_time_field.up,
+    down: migration_20260723_120033_add_articles_reading_time_field.down,
+    name: '20260723_120033_add_articles_reading_time_field',
+  },
+  {
+    up: migration_20260804_062947_add_media_prefix_field.up,
+    down: migration_20260804_062947_add_media_prefix_field.down,
+    name: '20260804_062947_add_media_prefix_field',
+  },
+  {
+    up: migration_20260807_043333_rework_footer_nav_groups.up,
+    down: migration_20260807_043333_rework_footer_nav_groups.down,
+    name: '20260807_043333_rework_footer_nav_groups',
+  },
+  {
+    up: migration_20260810_184715_add_multimedia_collection.up,
+    down: migration_20260810_184715_add_multimedia_collection.down,
+    name: '20260810_184715_add_multimedia_collection',
+  },
+  {
+    up: migration_20260810_194922_add_search_section_field.up,
+    down: migration_20260810_194922_add_search_section_field.down,
+    name: '20260810_194922_add_search_section_field',
+  },
+  {
+    up: migration_20260811_064548_restructure_multimedia_links.up,
+    down: migration_20260811_064548_restructure_multimedia_links.down,
+    name: '20260811_064548_restructure_multimedia_links',
+  },
+  {
+    up: migration_20260811_072800_add_related_multimedia.up,
+    down: migration_20260811_072800_add_related_multimedia.down,
+    name: '20260811_072800_add_related_multimedia',
+  },
+  {
+    up: migration_20260811_074014_add_multimedia_categories.up,
+    down: migration_20260811_074014_add_multimedia_categories.down,
+    name: '20260811_074014_add_multimedia_categories',
+  },
+  {
+    up: migration_20260812_173450_add_issues_collection.up,
+    down: migration_20260812_173450_add_issues_collection.down,
+    name: '20260812_173450_add_issues_collection',
+  },
+  {
+    up: migration_20260814_192113_add_user_roles_and_ownership.up,
+    down: migration_20260814_192113_add_user_roles_and_ownership.down,
+    name: '20260814_192113_add_user_roles_and_ownership',
+  },
+  {
+    up: migration_20260815_082758_add_invitations_collection.up,
+    down: migration_20260815_082758_add_invitations_collection.down,
+    name: '20260815_082758_add_invitations_collection',
+  },
+  {
+    up: migration_20260815_181223_add_centered_fields_and_footer_tiktok.up,
+    down: migration_20260815_181223_add_centered_fields_and_footer_tiktok.down,
+    name: '20260815_181223_add_centered_fields_and_footer_tiktok',
   },
 ]

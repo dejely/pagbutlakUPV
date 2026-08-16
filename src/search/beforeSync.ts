@@ -1,15 +1,20 @@
 import { BeforeSync, DocToSync } from '@payloadcms/plugin-search/types'
+import { getReadingTimeMinutes } from '@/utilities/readingTime'
 
 export const beforeSyncWithSearch: BeforeSync = async ({ req, originalDoc, searchDoc }) => {
   const {
     doc: { relationTo: collection },
   } = searchDoc
 
-  const { slug, id, categories, title, meta } = originalDoc
+  const { slug, id, categories, authors, title, meta, publishedAt, content, section } = originalDoc
 
   const modifiedDoc: DocToSync = {
     ...searchDoc,
     slug,
+    authors,
+    publishedAt,
+    section,
+    readingTimeMinutes: getReadingTimeMinutes(content),
     meta: {
       ...meta,
       title: meta?.title || title,

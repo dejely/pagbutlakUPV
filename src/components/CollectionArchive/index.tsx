@@ -1,10 +1,10 @@
 import { cn } from '@/utilities/ui'
 import React from 'react'
 
-import { Card, CardArticleData } from '@/components/Card'
+import { ArticleCard, type CardDoc } from '@/components/Articles/ArticleCard'
 
 export type Props = {
-  articles: CardArticleData[]
+  articles: CardDoc[]
 }
 
 export const CollectionArchive: React.FC<Props> = (props) => {
@@ -18,7 +18,7 @@ export const CollectionArchive: React.FC<Props> = (props) => {
             if (typeof result === 'object' && result !== null) {
               return (
                 <div className="col-span-4" key={index}>
-                  <Card className="h-full" doc={result} relationTo="articles" />
+                  <ArticleCard className="h-full" doc={result} relationTo="articles" />
                 </div>
               )
             }

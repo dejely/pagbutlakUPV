@@ -10,11 +10,16 @@ import { Categories } from './collections/Categories'
 import { Media } from './collections/Media'
 import { Pages } from './collections/Pages'
 import { Articles } from './collections/Articles'
+import { Authors } from './collections/Authors'
+import { Invitations } from './collections/Invitations'
+import { Issues } from './collections/Issues'
+import { Multimedia } from './collections/Multimedia'
 import { Users } from './collections/Users'
 import { Footer } from './Footer/config'
 import { Header } from './Header/config'
 import { plugins } from './plugins'
 import { defaultLexical } from '@/fields/defaultLexical'
+import { preventUnauthorizedSchedulePublish } from '@/hooks/preventUnauthorizedSchedulePublish'
 import { getServerSideURL } from './utilities/getURL'
 
 const filename = fileURLToPath(import.meta.url)
@@ -29,9 +34,31 @@ export default buildConfig({
       // The `BeforeDashboard` component renders the 'welcome' block that you see after logging into your admin panel.
       // Feel free to delete this at any time. Simply remove the line below.
       beforeDashboard: ['@/components/BeforeDashboard'],
+      graphics: {
+        Icon: '@/components/AdminGraphics/Icon',
+        Logo: '@/components/AdminGraphics/Logo',
+      },
     },
     importMap: {
       baseDir: path.resolve(dirname),
+    },
+    meta: {
+      titleSuffix: ' | Pagbutlak CMS',
+      description:
+        'Content management system for UPV Pagbutlak, the official student and community publication of UP Visayas - College of Arts and Sciences.',
+      icons: [
+        {
+          type: 'image/x-icon',
+          rel: 'icon',
+          url: '/favicon.ico',
+        },
+        {
+          type: 'image/png',
+          rel: 'apple-touch-icon',
+          sizes: '180x180',
+          url: '/apple-icon.png',
+        },
+      ],
     },
     user: Users.slug,
     livePreview: {
@@ -64,7 +91,17 @@ export default buildConfig({
       connectionString: process.env.DATABASE_URI || '',
     },
   }),
-  collections: [Pages, Articles, Media, Categories, Users],
+  collections: [
+    Pages,
+    Articles,
+    Authors,
+    Media,
+    Categories,
+    Multimedia,
+    Issues,
+    Users,
+    Invitations,
+  ],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer],
   plugins: [
@@ -73,6 +110,12 @@ export default buildConfig({
   ],
   secret: process.env.PAYLOAD_SECRET,
   sharp,
+  upload: {
+    limits: {
+      // Ceiling for the multipart parser; per-mimetype limits are enforced in Media's beforeValidate hook
+      fileSize: 100 * 1024 * 1024, // 100MB
+    },
+  },
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
@@ -89,6 +132,18 @@ export default buildConfig({
         return authHeader === `Bearer ${process.env.CRON_SECRET}`
       },
     },
+    // jobs.queue() skips collection hooks by default; needed for preventUnauthorizedSchedulePublish.
+    runHooks: true,
+    jobsCollectionOverrides: ({ defaultJobsCollection }) => ({
+      ...defaultJobsCollection,
+      hooks: {
+        ...defaultJobsCollection.hooks,
+        beforeChange: [
+          ...(defaultJobsCollection.hooks?.beforeChange ?? []),
+          preventUnauthorizedSchedulePublish,
+        ],
+      },
+    }),
     tasks: [],
   },
 })
